@@ -1,0 +1,36 @@
+name: quality-control
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+  pull_request_review_comment:
+    types: [created, edited]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v8.0.0
+        name: Setup uv
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+
+      - name: Lint
+        run: |
+          uv run ty check
+          uv run ruff format . --check
+
+      - name: Test
+        run: |
+          uv run pytest -vvv

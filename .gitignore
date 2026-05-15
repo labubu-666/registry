@@ -1,0 +1,14 @@
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.venv
+build/
+data/
+dist/
+wheels/
+
+.DS_Store
+.env
+*.py[oc]
+*.egg-info
+registry.db
