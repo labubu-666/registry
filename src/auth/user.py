@@ -11,7 +11,9 @@ def _hash_password(password: str, salt: str | None = None) -> str:
     """Return a salted hash of the password in the format 'salt:hash'."""
     if salt is None:
         salt = secrets.token_hex(16)
-    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), _HASH_ITERATIONS)
+    dk = hashlib.pbkdf2_hmac(
+        "sha256", password.encode(), salt.encode(), _HASH_ITERATIONS
+    )
     return f"{salt}:{dk.hex()}"
 
 

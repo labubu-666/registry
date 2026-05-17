@@ -65,7 +65,11 @@ async def token(
             logger.warning("Failed login attempt for user %r", username)
             return JSONResponse(
                 status_code=401,
-                content={"errors": [{"code": "UNAUTHORIZED", "message": "invalid credentials"}]},
+                content={
+                    "errors": [
+                        {"code": "UNAUTHORIZED", "message": "invalid credentials"}
+                    ]
+                },
             )
         logger.info("Authenticated user %r", username)
     else:
@@ -81,11 +85,13 @@ async def token(
         if len(parts) == 3:
             resource_type, resource_name, actions_str = parts
             actions = [a for a in actions_str.split(",") if a]
-            access.append({
-                "type": resource_type,
-                "name": resource_name,
-                "actions": actions,
-            })
+            access.append(
+                {
+                    "type": resource_type,
+                    "name": resource_name,
+                    "actions": actions,
+                }
+            )
 
     token_str = create_token(subject=username, access=access)
 

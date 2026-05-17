@@ -107,7 +107,9 @@ class TestFileStorageManifests:
         """Test that manifest is persisted to disk."""
         # Arrange
         storage1 = FileStorage(data_dir=temp_dir)
-        manifest_data = ManifestData(manifest={"key": "value"}, body=b"body", digest="sha256:abc")
+        manifest_data = ManifestData(
+            manifest={"key": "value"}, body=b"body", digest="sha256:abc"
+        )
 
         # Act
         storage1.put_manifest("alpine", "3.22.4", manifest_data)
@@ -450,7 +452,11 @@ class TestFileStorageIntegration:
         # Arrange & Act - First instance
         storage1 = FileStorage(data_dir=temp_dir)
         storage1.add_repository("alpine")
-        storage1.put_manifest("alpine", "3.22.4", ManifestData(manifest={"key": "value"}, body=b"", digest="sha256:test"))
+        storage1.put_manifest(
+            "alpine",
+            "3.22.4",
+            ManifestData(manifest={"key": "value"}, body=b"", digest="sha256:test"),
+        )
         storage1.put_blob("sha256:abc123", b"blob data")
 
         # Act - Second instance

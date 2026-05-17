@@ -14,7 +14,7 @@ def get_current_user(authorization: Annotated[str | None, Header()] = None) -> s
     receive the anonymous identity.
     """
     if authorization and authorization.lower().startswith("bearer "):
-        token = authorization[len("bearer "):]
+        token = authorization[len("bearer ") :]
         subject = get_subject(token)
         if subject:
             return subject

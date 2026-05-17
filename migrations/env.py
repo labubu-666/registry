@@ -64,17 +64,17 @@ def run_migrations_online() -> None:
 
     """
     configuration = config.get_section(config.config_ini_section, {})
-    
+
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
-    
+
     # Enable foreign keys for SQLite
     if database_url.startswith("sqlite://"):
         from sqlalchemy import event
-        
+
         @event.listens_for(connectable, "connect")
         def set_sqlite_pragma(dbapi_conn: Any, connection_record: Any) -> None:
             cursor = dbapi_conn.cursor()
@@ -82,9 +82,7 @@ def run_migrations_online() -> None:
             cursor.close()
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

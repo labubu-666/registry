@@ -18,15 +18,20 @@ app = FastAPI(docs_url="/api/v1/docs", title="registry", version="0.0.0")
 
 logger.info('📦 Using "%s" storage backend', storage)
 
+
 # Pydantic models for pagination
 class PaginationParams(BaseModel):
     """Pagination parameters for list endpoints"""
-    limit: int = Field(default=10, ge=1, le=100, description="Number of items per request")
+
+    limit: int = Field(
+        default=10, ge=1, le=100, description="Number of items per request"
+    )
     offset: int = Field(default=0, ge=0, description="Number of items to skip")
 
 
 class RepositoryListResponse(BaseModel):
     """Response model for repository list endpoint"""
+
     repositories: List[str]
     total: int
     limit: int
@@ -39,7 +44,9 @@ app.include_router(oci_router)
 
 @app.get("/api/v1/repositories", response_model=RepositoryListResponse)
 async def list_repositories(
-    limit: int = Query(default=10, ge=1, le=100, description="Number of items per request"),
+    limit: int = Query(
+        default=10, ge=1, le=100, description="Number of items per request"
+    ),
     offset: int = Query(default=0, ge=0, description="Number of items to skip"),
 ):
     """List repositories with limit/offset pagination"""

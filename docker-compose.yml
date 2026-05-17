@@ -2,7 +2,7 @@ services:
   registry:
     build: .
     environment:
-      - STORAGE_BACKEND=file
+      - WAREHOUSE_OCI_REGISTRY_STORAGE_BACKEND=file
     ports:
       - "5000:5000"
     volumes:

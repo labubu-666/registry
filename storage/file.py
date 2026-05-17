@@ -8,7 +8,6 @@ from src.storage.schema import ManifestData
 from .base import BaseStorage
 
 
-
 class FileStorage(BaseStorage):
     """File-based persistent storage backend.
 
@@ -104,7 +103,7 @@ class FileStorage(BaseStorage):
 
                         data["body"] = base64.b64decode(data["body"])
                     return data
-            except (json.JSONDecodeError, IOError):
+            except json.JSONDecodeError, IOError:
                 return None
         return None
 
@@ -203,7 +202,7 @@ class FileStorage(BaseStorage):
 
                             data["body"] = base64.b64decode(data["body"])
                         manifests.append(data)
-                except (json.JSONDecodeError, IOError):
+                except json.JSONDecodeError, IOError:
                     pass
 
         return manifests
