@@ -44,6 +44,7 @@ def user_store_with_alice(monkeypatch):
     store._users = {}
     store.add_user("alice", "password123")
     import src.routes.auth.routes as auth_module
+
     monkeypatch.setattr(auth_module, "user_store", store)
     return store
 
@@ -157,7 +158,10 @@ class TestUserStore:
         """Users listed in registry_users setting are loaded on init."""
         # Arrange
         import src.settings as settings_module
-        monkeypatch.setattr(settings_module.settings, "registry_users", "eve:pass1,mallory:pass2")
+
+        monkeypatch.setattr(
+            settings_module.settings, "registry_users", "eve:pass1,mallory:pass2"
+        )
 
         # Act
         store = UserStore()
@@ -170,7 +174,10 @@ class TestUserStore:
         """Entries without ':' are silently skipped."""
         # Arrange
         import src.settings as settings_module
-        monkeypatch.setattr(settings_module.settings, "registry_users", "validuser:pass,badentry,,  ")
+
+        monkeypatch.setattr(
+            settings_module.settings, "registry_users", "validuser:pass,badentry,,  "
+        )
 
         # Act
         store = UserStore()
@@ -374,11 +381,14 @@ class TestDockerLoginFlow:
         r3 = client.get("/v2/", headers={"Authorization": _bearer(token)})
         assert r3.status_code == 200
 
-    @pytest.mark.parametrize("username,password,expected_status", [
-        ("alice", "password123", 200),
-        ("alice", "wrongpass", 401),
-        ("unknown", "any", 401),
-    ])
+    @pytest.mark.parametrize(
+        "username,password,expected_status",
+        [
+            ("alice", "password123", 200),
+            ("alice", "wrongpass", 401),
+            ("unknown", "any", 401),
+        ],
+    )
     def test_token_endpoint_parametrized(
         self, client, user_store_with_alice, username, password, expected_status
     ):

@@ -59,7 +59,9 @@ class TestManifestOperations:
         response_put = client.put(
             f"/v2/{repo_name}/manifests/latest",
             content=manifest_json,
-            headers={"Content-Type": "application/vnd.docker.distribution.manifest.v2+json"},
+            headers={
+                "Content-Type": "application/vnd.docker.distribution.manifest.v2+json"
+            },
         )
 
         # Assert PUT
@@ -92,7 +94,9 @@ class TestManifestOperations:
         client.put(
             f"/v2/{repo_name}/manifests/latest",
             content=manifest_json,
-            headers={"Content-Type": "application/vnd.docker.distribution.manifest.v2+json"},
+            headers={
+                "Content-Type": "application/vnd.docker.distribution.manifest.v2+json"
+            },
         )
 
         # Act
@@ -123,7 +127,9 @@ class TestManifestOperations:
         client.put(
             f"/v2/{repo_name}/manifests/{tag}",
             content=manifest_json,
-            headers={"Content-Type": "application/vnd.docker.distribution.manifest.v2+json"},
+            headers={
+                "Content-Type": "application/vnd.docker.distribution.manifest.v2+json"
+            },
         )
         assert storage.manifest_exists(repo_name, tag)
 
@@ -155,7 +161,9 @@ class TestManifestOperations:
         response = client.put(
             f"/v2/{repo_name}/manifests/{tag}",
             content=manifest_json,
-            headers={"Content-Type": "application/vnd.docker.distribution.manifest.v2+json"},
+            headers={
+                "Content-Type": "application/vnd.docker.distribution.manifest.v2+json"
+            },
         )
 
         # Assert
@@ -190,7 +198,9 @@ class TestTagListing:
             client.put(
                 f"/v2/{repo_name}/manifests/{tag}",
                 content=manifest_json,
-                headers={"Content-Type": "application/vnd.docker.distribution.manifest.v2+json"},
+                headers={
+                    "Content-Type": "application/vnd.docker.distribution.manifest.v2+json"
+                },
             )
 
         # Act

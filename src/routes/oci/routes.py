@@ -225,7 +225,9 @@ async def initiate_blob_upload(name: str, user: CurrentUser):
 
 
 @oci_router.put("/v2/{name:path}/blobs/uploads/{uuid}")
-async def complete_blob_upload(name: str, uuid: str, digest: str, request: Request, user: CurrentUser):
+async def complete_blob_upload(
+    name: str, uuid: str, digest: str, request: Request, user: CurrentUser
+):
     """Complete a blob upload"""
     logger.debug("complete blob upload for %r/%r by %r", name, uuid, user)
     body = await request.body()

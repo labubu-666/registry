@@ -61,7 +61,7 @@ class FileStorage(BaseStorage):
             try:
                 with open(repos_file, "r") as f:
                     return set(json.load(f))
-            except (json.JSONDecodeError, IOError):
+            except json.JSONDecodeError, IOError:
                 return set()
         return set()
 
@@ -102,7 +102,7 @@ class FileStorage(BaseStorage):
 
                         data["body"] = base64.b64decode(data["body"])
                     return data
-            except (json.JSONDecodeError, IOError):
+            except json.JSONDecodeError, IOError:
                 return None
         return None
 
@@ -201,7 +201,7 @@ class FileStorage(BaseStorage):
 
                             data["body"] = base64.b64decode(data["body"])
                         manifests.append(data)
-                except (json.JSONDecodeError, IOError):
+                except json.JSONDecodeError, IOError:
                     pass
 
         return manifests
@@ -227,7 +227,9 @@ class FileStorage(BaseStorage):
                                         manifest["config"], dict
                                     ):
                                         if "digest" in manifest["config"]:
-                                            referenced.add(cast(str, manifest["config"]["digest"]))
+                                            referenced.add(
+                                                cast(str, manifest["config"]["digest"])
+                                            )
                                     if "layers" in manifest and isinstance(
                                         manifest["layers"], list
                                     ):
@@ -236,8 +238,10 @@ class FileStorage(BaseStorage):
                                                 isinstance(layer, dict)
                                                 and "digest" in layer
                                             ):
-                                                referenced.add(cast(str, layer["digest"]))
-                        except (json.JSONDecodeError, IOError):
+                                                referenced.add(
+                                                    cast(str, layer["digest"])
+                                                )
+                        except json.JSONDecodeError, IOError:
                             pass
 
         return referenced

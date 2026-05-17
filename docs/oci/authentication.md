@@ -33,24 +33,26 @@ GET /v2/ (Authorization: Bearer <JWT>)
 
 Settings are loaded via [pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) from environment variables or a `.env` file.
 
-| Environment Variable    | Type   | Default                                  | Description |
-|-------------------------|--------|------------------------------------------|-------------|
-| `AUTH_SECRET_KEY`       | `str`  | random (changes on restart)              | HMAC secret used to sign JWTs. **Set a stable value in production.** Generate one with `python -c "import secrets; print(secrets.token_hex(32))"` |
-| `AUTH_TOKEN_EXPIRATION` | `int`  | `300`                                    | Token lifetime in seconds. |
-| `AUTH_REALM`            | `str`  | `http://localhost:5000/auth/token`       | Token endpoint URL advertised in `WWW-Authenticate` challenges. Must be reachable by Docker clients. |
-| `AUTH_SERVICE`          | `str`  | `registry`                               | Service name embedded in the JWT `aud` (audience) claim. |
-| `AUTH_ISSUER`           | `str`  | `registry-token-service`                 | Issuer label embedded in the JWT `iss` claim (informational). |
-| `REGISTRY_USERS`        | `str`  | _(empty)_                                | Comma-separated `username:password` pairs loaded on startup. Example: `alice:supersecret,bob:hunter2` |
+| Environment Variable                       | Type   | Default                                  | Description |
+|--------------------------------------------|--------|------------------------------------------|-------------|
+| `WAREHOUSE_AUTH_SECRET_KEY`                | `str`  | random (changes on restart)              | HMAC secret used to sign JWTs. **Set a stable value in production.** Generate one with `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `WAREHOUSE_AUTH_TOKEN_EXPIRATION`          | `int`  | `300`                                    | Token lifetime in seconds. |
+| `WAREHOUSE_AUTH_REALM`                     | `str`  | `http://localhost:5000/auth/token`       | Token endpoint URL advertised in `WWW-Authenticate` challenges. Must be reachable by Docker clients. |
+| `WAREHOUSE_AUTH_SERVICE`                   | `str`  | `registry`                               | Service name embedded in the JWT `aud` (audience) claim. |
+| `WAREHOUSE_AUTH_ISSUER`                    | `str`  | `registry-token-service`                 | Issuer label embedded in the JWT `iss` claim (informational). |
+| `WAREHOUSE_OCI_REGISTRY_USERS`             | `str`  | _(empty)_                                | Comma-separated `username:password` pairs loaded on startup. Example: `alice:supersecret,bob:hunter2` |
+| `WAREHOUSE_OCI_REGISTRY_STORAGE_BACKEND`   | `str`  | `memory`                                 | Storage backend to use: `memory` (default) or `file`. |
+| `WAREHOUSE_OCI_REGISTRY_STORAGE_DIR`       | `str`  | `data`                                   | Directory used by the `file` storage backend. |
 
 ---
 
 ## Setting up users
 
-Copy `.env.dist` to `.env` and populate `REGISTRY_USERS`:
+Copy `.env.dist` to `.env` and populate `WAREHOUSE_OCI_REGISTRY_USERS`:
 
 ```env
-AUTH_SECRET_KEY=<output of secrets.token_hex(32)>
-REGISTRY_USERS=alice:supersecret,bob:hunter2
+WAREHOUSE_AUTH_SECRET_KEY=<output of secrets.token_hex(32)>
+WAREHOUSE_OCI_REGISTRY_USERS=alice:supersecret,bob:hunter2
 ```
 
 Restart the registry for the new users to take effect.
@@ -77,7 +79,7 @@ Docker will:
 
 | Query parameter | Description |
 |-----------------|-------------|
-| `service`       | Registry service name (sent automatically by Docker, must match `AUTH_SERVICE`). |
+| `service`       | Registry service name (sent automatically by Docker, must match `WAREHOUSE_AUTH_SERVICE`). |
 | `scope`         | Resource scope — e.g. `repository:alpine:pull,push`. Embedded in the JWT `access` claim. |
 | `account`       | Username hint used as the JWT subject when no `Authorization` header is present. |
 
