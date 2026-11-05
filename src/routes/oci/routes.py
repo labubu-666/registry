@@ -1,13 +1,14 @@
 import hashlib
 import json
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 
-from src.settings import settings, storage
 from src.auth.middleware import CurrentUser
+from src.settings import settings, storage
+from src.storage.gc import delete_unreferenced_blobs
+from src.storage.refs import child_manifest_digests, manifest_blob_digests
 from src.storage.schema import ManifestData
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ def _www_authenticate() -> str:
 
 
 @oci_router.get("/v2/")
-async def v2_base(authorization: Optional[str] = Header(default=None)):
+async def v2_base(authorization: str | None = Header(default=None)):
     """Docker Registry v2 API base endpoint.
 
     Returns 401 when no Bearer token is present so Docker knows where to
@@ -134,7 +135,7 @@ async def put_manifest(
     reference: str,
     request: Request,
     user: CurrentUser,
-    content_type: Optional[str] = Header(None),
+    content_type: str | None = Header(None),
 ):
     """Upload a manifest"""
     logger.debug("put manifest %r/%r by %r", name, reference, user)
@@ -249,14 +250,45 @@ async def complete_blob_upload(
     )
 
 
+def _is_tagged(name: str, digest: str) -> bool:
+    """Return whether any tag in the repository still points at ``digest``."""
+    return any(
+        (storage.get_manifest(name, tag) or {}).get("digest") == digest
+        for tag in storage.list_tags(name)
+    )
+
+
 @oci_router.delete("/v2/{name:path}/manifests/{reference}")
 async def delete_manifest(name: str, reference: str, user: CurrentUser):
-    """Delete a manifest"""
+    """Delete a manifest.
+
+    A manifest that an image index in the same repository still lists cannot
+    be deleted, whether it is addressed by digest or by tag: the index would be
+    left pointing at nothing. Deleting an index does not delete its children;
+    they stay addressable by digest.
+    """
     logger.debug("delete manifest %r/%r by %r", name, reference, user)
-    if not storage.manifest_exists(name, reference):
+    deleted = storage.get_manifest(name, reference)
+    if deleted is None:
         raise HTTPException(status_code=404, detail="Manifest not found")
 
+    digest = deleted.get("digest") or reference
+    for stored in storage.get_all_manifests_for_repo(name):
+        children = child_manifest_digests(stored.get("manifest", {}))
+        if reference in children or digest in children:
+            raise HTTPException(
+                status_code=409,
+                detail="Manifest is referenced by an image index in this repository",
+            )
+
     storage.delete_manifest(name, reference)
+
+    # Push stores each manifest under its tag and under its digest. Once the last
+    # tag pointing at this manifest is gone, drop the digest copy too.
+    if reference != digest and not _is_tagged(name, digest):
+        storage.delete_manifest(name, digest)
+
+    delete_unreferenced_blobs(storage, manifest_blob_digests(deleted["manifest"]))
 
     return Response(
         status_code=202, headers={"Docker-Distribution-API-Version": "registry/2.0"}

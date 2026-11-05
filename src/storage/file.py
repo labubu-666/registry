@@ -1,9 +1,12 @@
 """File-based storage backend for Docker Registry"""
 
+import base64
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Set, cast
+from typing import Any
+
 from .base import BaseStorage
+from .refs import manifest_blob_digests
 from .schema import ManifestData
 
 
@@ -54,18 +57,18 @@ class FileStorage(BaseStorage):
         """Get the file path for the repositories list."""
         return self.data_dir / "repositories.json"
 
-    def _load_repositories(self) -> Set[str]:
+    def _load_repositories(self) -> set[str]:
         """Load repositories from disk."""
         repos_file = self._get_repositories_path()
         if repos_file.exists():
             try:
-                with open(repos_file, "r") as f:
+                with open(repos_file) as f:
                     return set(json.load(f))
-            except json.JSONDecodeError, IOError:
+            except OSError, json.JSONDecodeError:
                 return set()
         return set()
 
-    def _save_repositories(self, repositories: Set[str]) -> None:
+    def _save_repositories(self, repositories: set[str]) -> None:
         """Save repositories to disk."""
         repos_file = self._get_repositories_path()
         with open(repos_file, "w") as f:
@@ -76,33 +79,28 @@ class FileStorage(BaseStorage):
     ) -> None:
         """Store a manifest to disk."""
         # Handle binary data in manifest_data
-        serializable_data: Dict[str, Any] = manifest_data.model_dump()
-        if "body" in serializable_data and isinstance(serializable_data["body"], bytes):
-            # Store body as base64-encoded string for JSON serialization
-            import base64
-
-            serializable_data["body"] = base64.b64encode(
-                serializable_data["body"]
-            ).decode("utf-8")
+        # ManifestData.body is always bytes, so it is always base64-encoded here
+        serializable_data: dict[str, Any] = manifest_data.model_dump()
+        serializable_data["body"] = base64.b64encode(serializable_data["body"]).decode(
+            "utf-8"
+        )
 
         manifest_path = self._get_manifest_path(name, reference)
         with open(manifest_path, "w") as f:
             json.dump(serializable_data, f, indent=2)
 
-    def get_manifest(self, name: str, reference: str) -> Optional[Dict[str, Any]]:
+    def get_manifest(self, name: str, reference: str) -> dict[str, Any] | None:
         """Retrieve a manifest from disk."""
         manifest_path = self._get_manifest_path(name, reference)
         if manifest_path.exists():
             try:
-                with open(manifest_path, "r") as f:
+                with open(manifest_path) as f:
                     data = json.load(f)
                     # Decode body back to bytes if present
                     if "body" in data and isinstance(data["body"], str):
-                        import base64
-
                         data["body"] = base64.b64decode(data["body"])
                     return data
-            except json.JSONDecodeError, IOError:
+            except OSError, json.JSONDecodeError:
                 return None
         return None
 
@@ -117,9 +115,9 @@ class FileStorage(BaseStorage):
         if manifest_path.exists():
             manifest_path.unlink()
 
-    def list_tags(self, name: str) -> List[str]:
+    def list_tags(self, name: str) -> list[str]:
         """List all tags for a repository."""
-        tags: Set[str] = set()
+        tags: set[str] = set()
         repo_dir = self.manifests_dir / name
 
         if repo_dir.exists():
@@ -139,14 +137,14 @@ class FileStorage(BaseStorage):
         with open(blob_path, "wb") as f:
             f.write(data)
 
-    def get_blob(self, digest: str) -> Optional[bytes]:
+    def get_blob(self, digest: str) -> bytes | None:
         """Retrieve a blob from disk."""
         blob_path = self._get_blob_path(digest)
         if blob_path.exists():
             try:
                 with open(blob_path, "rb") as f:
                     return f.read()
-            except IOError:
+            except OSError:
                 return None
         return None
 
@@ -167,7 +165,7 @@ class FileStorage(BaseStorage):
         repositories.add(name)
         self._save_repositories(repositories)
 
-    def list_repositories(self) -> List[str]:
+    def list_repositories(self) -> list[str]:
         """List all registered repositories."""
         return list(self._load_repositories())
 
@@ -185,63 +183,40 @@ class FileStorage(BaseStorage):
 
             shutil.rmtree(repo_dir)
 
-    def get_all_manifests_for_repo(self, name: str) -> List[Dict[str, Any]]:
+    def get_all_manifests_for_repo(self, name: str) -> list[dict[str, Any]]:
         """Get all manifests for a repository."""
-        manifests: List[Dict[str, Any]] = []
+        manifests: list[dict[str, Any]] = []
         repo_dir = self.manifests_dir / name
 
         if repo_dir.exists():
             for file_path in repo_dir.glob("*.json"):
                 try:
-                    with open(file_path, "r") as f:
+                    with open(file_path) as f:
                         data = json.load(f)
                         # Decode body back to bytes if present
                         if "body" in data and isinstance(data["body"], str):
-                            import base64
-
                             data["body"] = base64.b64decode(data["body"])
                         manifests.append(data)
-                except json.JSONDecodeError, IOError:
+                except OSError, json.JSONDecodeError:
                     pass
 
         return manifests
 
-    def get_referenced_blobs(self) -> Set[str]:
+    def get_referenced_blobs(self) -> set[str]:
         """Get all blob digests that are currently referenced by any manifest."""
-        referenced: Set[str] = set()
-        manifests_dir_path = self.manifests_dir
+        referenced: set[str] = set()
+        if not self.manifests_dir.exists():
+            return referenced
 
-        if manifests_dir_path.exists():
-            for repo_dir in manifests_dir_path.iterdir():
-                if repo_dir.is_dir():
-                    for file_path in repo_dir.glob("*.json"):
-                        try:
-                            with open(file_path, "r") as f:
-                                data = json.load(f)
-                                if "manifest" in data and isinstance(
-                                    data["manifest"], dict
-                                ):
-                                    manifest: Dict[str, Any] = data["manifest"]
-                                    # Extract blob references
-                                    if "config" in manifest and isinstance(
-                                        manifest["config"], dict
-                                    ):
-                                        if "digest" in manifest["config"]:
-                                            referenced.add(
-                                                cast(str, manifest["config"]["digest"])
-                                            )
-                                    if "layers" in manifest and isinstance(
-                                        manifest["layers"], list
-                                    ):
-                                        for layer in manifest["layers"]:
-                                            if (
-                                                isinstance(layer, dict)
-                                                and "digest" in layer
-                                            ):
-                                                referenced.add(
-                                                    cast(str, layer["digest"])
-                                                )
-                        except json.JSONDecodeError, IOError:
-                            pass
-
+        for repo_dir in self.manifests_dir.iterdir():
+            if not repo_dir.is_dir():
+                continue
+            for file_path in repo_dir.glob("*.json"):
+                try:
+                    with open(file_path) as f:
+                        data = json.load(f)
+                except OSError, json.JSONDecodeError:
+                    continue
+                if isinstance(data.get("manifest"), dict):
+                    referenced |= manifest_blob_digests(data["manifest"])
         return referenced

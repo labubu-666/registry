@@ -11,14 +11,13 @@ Docker login flow:
 
 import base64
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Header, Query, Response
 from fastapi.responses import JSONResponse
 
-from src.settings import settings
 from src.auth.token_service import create_token
 from src.auth.user import ANONYMOUS_USER, user_store
+from src.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -42,10 +41,10 @@ def _decode_basic(authorization: str) -> tuple[str, str] | None:
 
 @auth_router.get("/auth/token")
 async def token(
-    service: Optional[str] = Query(default=None),
-    scope: Optional[str] = Query(default=None),
-    account: Optional[str] = Query(default=None),
-    authorization: Optional[str] = Header(default=None),
+    service: str | None = Query(default=None),
+    scope: str | None = Query(default=None),
+    account: str | None = Query(default=None),
+    authorization: str | None = Header(default=None),
 ) -> Response:
     """Issue a JWT for Docker clients.
 

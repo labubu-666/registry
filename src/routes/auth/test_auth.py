@@ -9,7 +9,6 @@ from src.api import app
 from src.auth.token_service import create_token, decode_token, get_subject
 from src.auth.user import UserStore, _hash_password, _verify_password
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
