@@ -1,6 +1,7 @@
 """CLI entry point for registry server"""
 
 import click
+
 from src.api import server as run_server
 
 

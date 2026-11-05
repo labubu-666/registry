@@ -1,12 +1,15 @@
 """Tests for file-based storage backend"""
 
-import pytest
 import json
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
-from .file import FileStorage
+
+import pytest
+
 from src.storage.schema import ManifestData
+
+from .file import FileStorage
 
 
 @pytest.fixture

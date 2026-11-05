@@ -1,8 +1,9 @@
 """In-memory storage backend for Docker Registry"""
 
-from typing import Dict, List, Optional, Any, Set
+from typing import Any
 
 from src.storage.schema import ManifestData
+
 from .base import BaseStorage
 
 
@@ -15,9 +16,9 @@ class MemoryStorage(BaseStorage):
 
     def __init__(self):
         """Initialize memory storage with empty data structures"""
-        self.manifests: Dict[str, Any] = {}
-        self.blobs: Dict[str, bytes] = {}
-        self.repositories: Set[str] = set()
+        self.manifests: dict[str, Any] = {}
+        self.blobs: dict[str, bytes] = {}
+        self.repositories: set[str] = set()
 
     def put_manifest(
         self, name: str, reference: str, manifest_data: ManifestData
@@ -26,7 +27,7 @@ class MemoryStorage(BaseStorage):
         key = f"{name}:{reference}"
         self.manifests[key] = manifest_data
 
-    def get_manifest(self, name: str, reference: str) -> Optional[Dict[str, Any]]:
+    def get_manifest(self, name: str, reference: str) -> dict[str, Any] | None:
         """Retrieve a manifest from memory."""
         key = f"{name}:{reference}"
         return self.manifests.get(key)
@@ -42,12 +43,12 @@ class MemoryStorage(BaseStorage):
         if key in self.manifests:
             del self.manifests[key]
 
-    def list_tags(self, name: str) -> List[str]:
+    def list_tags(self, name: str) -> list[str]:
         """List all tags for a repository."""
-        tags: Set[str] = set()
+        tags: set[str] = set()
         prefix = f"{name}:"
 
-        for key in self.manifests.keys():
+        for key in self.manifests:
             if key.startswith(prefix):
                 ref = key[len(prefix) :]
                 # Only include tags, not digest references
@@ -60,7 +61,7 @@ class MemoryStorage(BaseStorage):
         """Store a blob in memory."""
         self.blobs[digest] = data
 
-    def get_blob(self, digest: str) -> Optional[bytes]:
+    def get_blob(self, digest: str) -> bytes | None:
         """Retrieve a blob from memory."""
         return self.blobs.get(digest)
 
@@ -77,7 +78,7 @@ class MemoryStorage(BaseStorage):
         """Register a repository in memory."""
         self.repositories.add(name)
 
-    def list_repositories(self) -> List[str]:
+    def list_repositories(self) -> list[str]:
         """List all registered repositories."""
         return list(self.repositories)
 
@@ -86,29 +87,29 @@ class MemoryStorage(BaseStorage):
         # Remove repository from list
         self.repositories.discard(name)
         # Remove all manifests for this repository
-        keys_to_delete = [
-            key for key in self.manifests.keys() if key.startswith(f"{name}:")
-        ]
+        keys_to_delete = [key for key in self.manifests if key.startswith(f"{name}:")]
         for key in keys_to_delete:
             del self.manifests[key]
 
-    def get_all_manifests_for_repo(self, name: str) -> List[Dict[str, Any]]:
+    def get_all_manifests_for_repo(self, name: str) -> list[dict[str, Any]]:
         """Get all manifests for a repository."""
-        manifests: List[Dict[str, Any]] = []
+        manifests: list[dict[str, Any]] = []
         prefix = f"{name}:"
         for key, manifest_data in self.manifests.items():
             if key.startswith(prefix):
                 manifests.append(manifest_data)
         return manifests
 
-    def get_referenced_blobs(self) -> Set[str]:
+    def get_referenced_blobs(self) -> set[str]:
         """Get all blob digests that are currently referenced by any manifest."""
-        referenced: Set[str] = set()
-        for manifest_data in self.manifests.values():
+        referenced: set[str] = set()
+        for stored in self.manifests.values():
+            # Entries may be ManifestData models or plain dicts; dict() handles both
+            manifest_data = dict(stored)
             if "manifest" in manifest_data and isinstance(
                 manifest_data["manifest"], dict
             ):
-                manifest: Dict[str, Any] = manifest_data["manifest"]
+                manifest: dict[str, Any] = manifest_data["manifest"]
                 # Extract blob references from manifest structure
                 # Docker manifest v2 format
                 if "config" in manifest and isinstance(manifest["config"], dict):

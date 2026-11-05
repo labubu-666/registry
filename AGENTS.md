@@ -1,7 +1,7 @@
 This is a lightweight software distribution implementation supporting different technologies.
 
 - Follow the "Easier to Ask Forgiveness than Permission" pattern.
-- Lint using `uv run ty check`.
+- Lint using `uv run ty check` and format using `uv run ruff format`.
 - Run using `uv run python cli.py`.
     - Dont try (re)starting the server, ill handle it myself.
 - Run tests using `uv run pytest`.
