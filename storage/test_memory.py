@@ -1,7 +1,9 @@
 """Tests for in-memory storage backend"""
 
 import pytest
+
 from src.storage.schema import ManifestData
+
 from .memory import MemoryStorage
 
 
@@ -331,3 +333,53 @@ class TestMemoryStorageIntegration:
         # Assert
         assert "alpine" not in storage2.list_repositories()
         assert storage2.get_manifest("alpine", "3.22.4") is None
+
+
+class TestMemoryStorageReferencedBlobs:
+    """Tests for get_referenced_blobs in MemoryStorage."""
+
+    @pytest.mark.parametrize(
+        "stored",
+        [
+            pytest.param(
+                {
+                    "manifest": {
+                        "config": {"digest": "sha256:cfg"},
+                        "layers": [{"digest": "sha256:l1"}, {"digest": "sha256:l2"}],
+                    },
+                    "body": b"",
+                    "digest": "sha256:m",
+                },
+                id="dict",
+            ),
+            pytest.param(
+                ManifestData(
+                    manifest={
+                        "config": {"digest": "sha256:cfg"},
+                        "layers": [{"digest": "sha256:l1"}, {"digest": "sha256:l2"}],
+                    },
+                    body=b"",
+                    digest="sha256:m",
+                ),
+                id="model",
+            ),
+        ],
+    )
+    def test_get_referenced_blobs(self, storage, stored):
+        """Test that config and layer digests are extracted from dict or model entries."""
+        # Arrange
+        storage.put_manifest("alpine", "3.22.4", stored)
+
+        # Act
+        referenced = storage.get_referenced_blobs()
+
+        # Assert
+        assert referenced == {"sha256:cfg", "sha256:l1", "sha256:l2"}
+
+    def test_get_referenced_blobs_empty(self, storage):
+        """Test that no manifests yield no referenced blobs."""
+        # Act
+        referenced = storage.get_referenced_blobs()
+
+        # Assert
+        assert referenced == set()

@@ -11,4 +11,3 @@ wheels/
 .env
 *.py[oc]
 *.egg-info
-registry.db

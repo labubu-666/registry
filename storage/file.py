@@ -2,9 +2,10 @@
 
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Set
+from typing import Any, Dict, List, Optional, Set
 
 from src.storage.schema import ManifestData
+
 from .base import BaseStorage
 
 
@@ -62,7 +63,7 @@ class FileStorage(BaseStorage):
             try:
                 with open(repos_file, "r") as f:
                     return set(json.load(f))
-            except json.JSONDecodeError, IOError:
+            except OSError, json.JSONDecodeError:
                 return set()
         return set()
 
