@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field
 from .routes.auth import auth_router
 from .routes.oci import oci_router
 from .settings import storage
+from .storage.gc import delete_unreferenced_blobs
+from .storage.refs import manifest_blob_digests
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -77,27 +79,12 @@ async def delete_repository(repo: str):
     # Delete the repository (removes from list and all its manifests)
     storage.delete_repository(repo)
 
-    # Get the set of blobs still referenced by other manifests
-    referenced_blobs = storage.get_referenced_blobs()
-
-    # Collect all blobs that were in the deleted manifests
-    blobs_to_check: set[str] = set()
+    # Collect the blobs the deleted manifests used, then free the ones nothing else uses
+    candidates: set[str] = set()
     for manifest_data in manifests_to_delete:
-        if "manifest" in manifest_data and isinstance(manifest_data["manifest"], dict):
-            manifest = manifest_data["manifest"]
-            # Extract blob references from manifest
-            if "config" in manifest and isinstance(manifest["config"], dict):
-                if "digest" in manifest["config"]:
-                    blobs_to_check.add(manifest["config"]["digest"])
-            if "layers" in manifest and isinstance(manifest["layers"], list):
-                for layer in manifest["layers"]:
-                    if isinstance(layer, dict) and "digest" in layer:
-                        blobs_to_check.add(layer["digest"])
-
-    # Delete blobs that are no longer referenced
-    for blob_digest in blobs_to_check:
-        if blob_digest not in referenced_blobs and storage.blob_exists(blob_digest):
-            storage.delete_blob(blob_digest)
+        if isinstance(manifest_data.get("manifest"), dict):
+            candidates |= manifest_blob_digests(manifest_data["manifest"])
+    delete_unreferenced_blobs(storage, candidates)
 
     return JSONResponse(
         content={"message": f"Repository '{repo}' deleted successfully"},

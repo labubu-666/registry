@@ -1,7 +1,8 @@
 """Abstract base class for storage backends"""
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Any, Set
+from typing import Any
+
 from .schema import ManifestData
 
 
@@ -14,7 +15,7 @@ class BaseStorage(ABC):
 
     @abstractmethod
     def put_manifest(
-        self, name: str, reference: str, manifest_data: "ManifestData"
+        self, name: str, reference: str, manifest_data: ManifestData
     ) -> None:
         """Store a manifest.
 
@@ -31,7 +32,7 @@ class BaseStorage(ABC):
         pass
 
     @abstractmethod
-    def get_manifest(self, name: str, reference: str) -> Optional[Dict[str, Any]]:
+    def get_manifest(self, name: str, reference: str) -> dict[str, Any] | None:
         """Retrieve a manifest.
 
         Args:
@@ -67,7 +68,7 @@ class BaseStorage(ABC):
         pass
 
     @abstractmethod
-    def list_tags(self, name: str) -> List[str]:
+    def list_tags(self, name: str) -> list[str]:
         """List all tags for a repository.
 
         Args:
@@ -89,7 +90,7 @@ class BaseStorage(ABC):
         pass
 
     @abstractmethod
-    def get_blob(self, digest: str) -> Optional[bytes]:
+    def get_blob(self, digest: str) -> bytes | None:
         """Retrieve a blob.
 
         Args:
@@ -131,7 +132,7 @@ class BaseStorage(ABC):
         pass
 
     @abstractmethod
-    def list_repositories(self) -> List[str]:
+    def list_repositories(self) -> list[str]:
         """List all registered repositories.
 
         Returns:
@@ -149,7 +150,7 @@ class BaseStorage(ABC):
         pass
 
     @abstractmethod
-    def get_all_manifests_for_repo(self, name: str) -> List[Dict[str, Any]]:
+    def get_all_manifests_for_repo(self, name: str) -> list[dict[str, Any]]:
         """Get all manifests for a repository.
 
         Args:
@@ -161,7 +162,7 @@ class BaseStorage(ABC):
         pass
 
     @abstractmethod
-    def get_referenced_blobs(self) -> Set[str]:
+    def get_referenced_blobs(self) -> set[str]:
         """Get all blob digests that are currently referenced by any manifest.
 
         Returns:

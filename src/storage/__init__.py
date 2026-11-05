@@ -1,7 +1,7 @@
 """Storage backends for Docker Registry"""
 
 from .base import BaseStorage
-from .memory import MemoryStorage
 from .file import FileStorage
+from .memory import MemoryStorage
 
-__all__ = ["BaseStorage", "MemoryStorage", "FileStorage"]
+__all__ = ["BaseStorage", "FileStorage", "MemoryStorage"]
