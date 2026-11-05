@@ -118,20 +118,52 @@ class TestDeleteTagGarbageCollection:
         assert not storage.blob_exists("sha256:cfg")
         assert not storage.blob_exists("sha256:l1")
 
-    def test_digest_delete_does_not_trigger_blob_removal(self, client):
-        """Test that deleting by digest (not a tag) leaves blobs alone."""
+    def test_digest_delete_removes_tags_and_frees_blobs(self, client):
+        """Test that deleting by digest removes every tag pointing at it and frees its blobs."""
         # Arrange
         from src.api import storage
 
         digest = push(client, "alpine", "3.22.4", "sha256:cfg", ["sha256:l1"])
+        push(client, "alpine", "latest", "sha256:cfg", ["sha256:l1"])
         storage.put_blob("sha256:cfg", b"config")
+        storage.put_blob("sha256:l1", b"layer")
 
         # Act
         response = client.delete(f"/v2/alpine/manifests/{digest}")
 
         # Assert
         assert response.status_code == 202
-        assert storage.blob_exists("sha256:cfg")
+        assert storage.list_tags("alpine") == []
+        assert not storage.manifest_exists("alpine", digest)
+        assert not storage.blob_exists("sha256:cfg")
+        assert not storage.blob_exists("sha256:l1")
+
+    def test_digest_delete_recovers_tags_when_digest_copy_is_missing(self, client):
+        """Test that a digest delete still removes tags whose digest copy was lost."""
+        # Arrange
+        from src.api import storage
+
+        digest = push(client, "alpine", "3.22.4", "sha256:cfg", ["sha256:l1"])
+        push(client, "alpine", "latest", "sha256:cfg", ["sha256:l1"])
+        storage.delete_manifest("alpine", digest)
+
+        # Act
+        response = client.delete(f"/v2/alpine/manifests/{digest}")
+
+        # Assert
+        assert response.status_code == 202
+        assert storage.list_tags("alpine") == []
+
+    def test_digest_delete_of_unknown_digest_returns_404(self, client):
+        """Test that a digest nothing points at returns 404."""
+        # Arrange
+        push(client, "alpine", "3.22.4", "sha256:cfg", ["sha256:l1"])
+
+        # Act
+        response = client.delete("/v2/alpine/manifests/sha256:unknown")
+
+        # Assert
+        assert response.status_code == 404
 
 
 class TestDeleteWithIndex:
