@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query
@@ -32,7 +31,7 @@ class PaginationParams(BaseModel):
 class RepositoryListResponse(BaseModel):
     """Response model for repository list endpoint"""
 
-    repositories: List[str]
+    repositories: list[str]
     total: int
     limit: int
     offset: int
