@@ -250,17 +250,22 @@ async def complete_blob_upload(
     )
 
 
-def _is_tagged(name: str, digest: str) -> bool:
-    """Return whether any tag in the repository still points at ``digest``."""
-    return any(
-        (storage.get_manifest(name, tag) or {}).get("digest") == digest
+def _tags_with_digest(name: str, digest: str) -> list[str]:
+    """Return the tags in the repository whose manifest has ``digest``."""
+    return [
+        tag
         for tag in storage.list_tags(name)
-    )
+        if (storage.get_manifest(name, tag) or {}).get("digest") == digest
+    ]
 
 
 @oci_router.delete("/v2/{name:path}/manifests/{reference}")
 async def delete_manifest(name: str, reference: str, user: CurrentUser):
     """Delete a manifest.
+
+    Deleting by tag removes that tag, and the digest copy too once no other tag
+    points at the manifest. Deleting by digest removes the manifest together
+    with every tag that points at it, so no tag is left dangling.
 
     A manifest that an image index in the same repository still lists cannot
     be deleted, whether it is addressed by digest or by tag: the index would be
@@ -268,7 +273,14 @@ async def delete_manifest(name: str, reference: str, user: CurrentUser):
     they stay addressable by digest.
     """
     logger.debug("delete manifest %r/%r by %r", name, reference, user)
+    by_digest = reference.startswith("sha256:")
+
     deleted = storage.get_manifest(name, reference)
+    if deleted is None and by_digest:
+        # The digest copy may be missing while tags still point at the manifest.
+        tags = _tags_with_digest(name, reference)
+        if tags:
+            deleted = storage.get_manifest(name, tags[0])
     if deleted is None:
         raise HTTPException(status_code=404, detail="Manifest not found")
 
@@ -281,12 +293,16 @@ async def delete_manifest(name: str, reference: str, user: CurrentUser):
                 detail="Manifest is referenced by an image index in this repository",
             )
 
-    storage.delete_manifest(name, reference)
-
-    # Push stores each manifest under its tag and under its digest. Once the last
-    # tag pointing at this manifest is gone, drop the digest copy too.
-    if reference != digest and not _is_tagged(name, digest):
+    if by_digest:
+        for tag in _tags_with_digest(name, digest):
+            storage.delete_manifest(name, tag)
         storage.delete_manifest(name, digest)
+    else:
+        storage.delete_manifest(name, reference)
+        # Push stores each manifest under its tag and under its digest. Once the
+        # last tag pointing at this manifest is gone, drop the digest copy too.
+        if not _tags_with_digest(name, digest):
+            storage.delete_manifest(name, digest)
 
     delete_unreferenced_blobs(storage, manifest_blob_digests(deleted["manifest"]))
 
